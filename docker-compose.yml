@@ -17,8 +17,11 @@ services:
       - TICKTICK_BASE_URL=${TICKTICK_BASE_URL:-https://api.ticktick.com/open/v1}
       - TICKTICK_AUTH_URL=${TICKTICK_AUTH_URL:-https://ticktick.com/oauth/authorize}
       - TICKTICK_TOKEN_URL=${TICKTICK_TOKEN_URL:-https://ticktick.com/oauth/token}
-      # API keys for MCP tool authorization (comma-separated). Prefer secrets.
-      - MCP_SERVER_API_KEYS=${MCP_SERVER_API_KEYS}
+      # OAuth2 gateway configuration (for Claude Desktop remote connector auth)
+      - MCP_OAUTH_CLIENTS=${MCP_OAUTH_CLIENTS}
+      - MCP_OAUTH_SIGNING_KEY=${MCP_OAUTH_SIGNING_KEY}
+      - MCP_TOKEN_EXPIRY=${MCP_TOKEN_EXPIRY:-900}
+      - FASTMCP_SERVER_URL=${FASTMCP_SERVER_URL:-http://127.0.0.1:8000}
       # Reverse proxy integration (nginx-proxy / jwilder / traefik style)
       - VIRTUAL_HOST=ticktick.marcuslab.uk
       - VIRTUAL_PORT=8080
@@ -42,6 +45,7 @@ services:
     networks:
       - portpilot_default
       - ticktick_internal
+
     # Security options (non-root user can be set in Dockerfile build stage if desired)
     # user: 1000:1000
     # Read-only root FS except needed dirs (adjust if app writes elsewhere)
@@ -62,3 +66,32 @@ networks:
 
 # Example secrets file content (not committed):
 # echo "MCP_SERVER_API_KEYS=$(python - <<'PY'\nimport secrets;print(','.join(secrets.token_urlsafe(32) for _ in range(2)))\nPY)" > ./secrets/mcp_api_keys
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    container_name: ticktick-oauth2-proxy
+    restart: unless-stopped
+    ports:
+      - "8081:8081"  # External authenticated entrypoint
+    environment:
+      - OAUTH2_PROXY_PROVIDER=oidc
+      - OAUTH2_PROXY_UPSTREAMS=http://ticktick-mcp:8080/sse
+      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:8081
+      - OAUTH2_PROXY_REDIRECT_URL=${OIDC_REDIRECT_URL:-https://ticktick.marcuslab.uk/oauth2/callback}
+      - OAUTH2_PROXY_CLIENT_ID=${OIDC_CLIENT_ID}
+      - OAUTH2_PROXY_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+      - OAUTH2_PROXY_OIDC_ISSUER_URL=${OIDC_ISSUER_URL}
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
+      - OAUTH2_PROXY_EMAIL_DOMAINS=*
+      - OAUTH2_PROXY_SCOPE=openid profile email
+      - OAUTH2_PROXY_SET_XAUTHREQUEST=true
+      - OAUTH2_PROXY_PASS_ACCESS_TOKEN=true
+      - VIRTUAL_HOST=ticktick.marcuslab.uk
+      - VIRTUAL_PORT=8081
+      - LETSENCRYPT_HOST=ticktick.marcuslab.uk
+      - LETSENCRYPT_EMAIL=marcus.williams13@gmail.com
+    networks:
+      - portpilot_default
+      - ticktick_internal
+    depends_on:
+      - ticktick-mcp

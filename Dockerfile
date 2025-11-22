@@ -24,14 +24,18 @@ COPY README.md .
 # Install the package
 RUN pip install --no-cache-dir -e .
 
-# Expose port for SSE transport
+# Expose port for OAuth gateway and SSE transport
 EXPOSE 8080
 
-# Health check endpoint (SSE server provides /sse endpoint)
+# Health check endpoint (gateway provides /health endpoint)
 # Using Python since curl is not available in slim image
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
-# Run the server with SSE transport
+# Start script that runs both FastMCP server and OAuth gateway
+COPY start-remote.sh /app/start-remote.sh
+RUN chmod +x /app/start-remote.sh
+
+# Run the start script
 # Note: Users should mount their .env file or pass environment variables
-CMD ["python", "-m", "ticktick_mcp.cli", "run", "--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["/app/start-remote.sh"]
