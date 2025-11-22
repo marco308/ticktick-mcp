@@ -65,11 +65,30 @@ Before you begin, you will need:
         client_id = get_user_input("Enter your TickTick Client ID: ")
         client_secret = get_user_input("Enter your TickTick Client Secret: ")
     
-    # Initialize the auth manager
+    # Allow override of redirect port / URI via env vars
+    redirect_port_env = os.getenv("TICKTICK_REDIRECT_PORT")
+    redirect_uri_env = os.getenv("TICKTICK_REDIRECT_URI")
+
+    # If only port provided, derive redirect URI
+    if redirect_port_env and not redirect_uri_env:
+        redirect_uri_env = f"http://localhost:{redirect_port_env}/callback"
+
+    try:
+        port_override = int(redirect_port_env) if redirect_port_env else 8000
+    except ValueError:
+        print(f"Invalid TICKTICK_REDIRECT_PORT '{redirect_port_env}', falling back to 8000")
+        port_override = 8000
+
+    # Initialize the auth manager with optional overrides
     auth = TickTickAuth(
         client_id=client_id,
-        client_secret=client_secret
+        client_secret=client_secret,
+        redirect_uri=redirect_uri_env or "http://localhost:8000/callback",
+        port=port_override
     )
+
+    if redirect_uri_env or redirect_port_env:
+        print(f"Using custom OAuth redirect: {auth.redirect_uri} (port {port_override})")
     
     print("\nStarting the OAuth authentication flow...")
     print("A browser window will open for you to authorize the application.")

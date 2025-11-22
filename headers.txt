@@ -1,0 +1,12 @@
+HTTP/2 307 
+date: Sat, 22 Nov 2025 22:14:19 GMT
+content-length: 0
+location: https://claude.ai/api/mcp/auth_callback?code=kPo1_os_txBMtgro5kVF2CD_2tlWfvLAx9O4CKCHFEI&state=7f434ba2043fec4a
+server: cloudflare
+strict-transport-security: max-age=31536000
+cf-cache-status: DYNAMIC
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=e32pJ8gv3M%2BQqay7Wq4hYMSGt1sQih%2FNtC%2B6avuNJSg4YrWe65OrWXPoYZ9FtUKcklcK%2FvjAYmsK8xIZeZKMexAEXPMM45GwhQO9Fd37uGZLOeFtIQ%3D%3D"}]}
+cf-ray: 9a2bc7738aec14d6-LHR
+alt-svc: h3=":443"; ma=86400
+
