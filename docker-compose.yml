@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ticktick-mcp:
+    build: .
+    container_name: ticktick-mcp-server
+    ports:
+      - "8080:8080"
+    environment:
+      # TickTick API credentials - set these in a .env file
+      - TICKTICK_CLIENT_ID=${TICKTICK_CLIENT_ID}
+      - TICKTICK_CLIENT_SECRET=${TICKTICK_CLIENT_SECRET}
+      - TICKTICK_ACCESS_TOKEN=${TICKTICK_ACCESS_TOKEN}
+      - TICKTICK_REFRESH_TOKEN=${TICKTICK_REFRESH_TOKEN}
+      # Optional: Override TickTick API URLs (for Dida365)
+      - TICKTICK_BASE_URL=${TICKTICK_BASE_URL:-https://api.ticktick.com/open/v1}
+      - TICKTICK_AUTH_URL=${TICKTICK_AUTH_URL:-https://ticktick.com/oauth/authorize}
+      - TICKTICK_TOKEN_URL=${TICKTICK_TOKEN_URL:-https://ticktick.com/oauth/token}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/sse"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    # Optional: mount .env file directly
+    # volumes:
+    #   - ./.env:/app/.env:ro

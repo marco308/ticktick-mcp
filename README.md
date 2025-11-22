@@ -100,7 +100,7 @@ The server handles token refresh automatically, so you won't need to reauthentic
 
 3. Follow the same authentication steps as for TickTick
 
-## Usage with Claude for Desktop
+## Usage with Claude for Desktop (Local Mode)
 
 1. Install [Claude for Desktop](https://claude.ai/download)
 2. Edit your Claude for Desktop configuration file:
@@ -130,6 +130,110 @@ The server handles token refresh automatically, so you won't need to reauthentic
 4. Restart Claude for Desktop
 
 Once connected, you'll see the TickTick MCP server tools available in Claude, indicated by the 🔨 (tools) icon.
+
+## Remote Server Deployment (Docker)
+
+For hosting the MCP server on a remote machine or Docker server accessible by multiple AI providers:
+
+### Docker Deployment
+
+1. **Authenticate with TickTick first** (on your local machine):
+   ```bash
+   uv run -m ticktick_mcp.cli auth
+   ```
+   This will create a `.env` file with your credentials.
+
+2. **Build and run with Docker Compose**:
+   ```bash
+   # Copy your .env file with credentials
+   cp .env .env.docker
+   
+   # Build and start the container
+   docker-compose up -d
+   ```
+
+3. **Or build and run manually**:
+   ```bash
+   # Build the image
+   docker build -t ticktick-mcp .
+   
+   # Run the container with environment variables
+   docker run -d \
+     --name ticktick-mcp \
+     -p 8080:8080 \
+     -e TICKTICK_CLIENT_ID=your_client_id \
+     -e TICKTICK_CLIENT_SECRET=your_client_secret \
+     -e TICKTICK_ACCESS_TOKEN=your_access_token \
+     -e TICKTICK_REFRESH_TOKEN=your_refresh_token \
+     ticktick-mcp
+   ```
+
+4. **The server will be available at**: `http://your-server:8080/sse`
+
+### Connecting AI Providers to Remote Server
+
+Once deployed, configure your AI provider to connect to the remote MCP server:
+
+#### Claude Desktop (Remote Mode)
+
+Edit your Claude configuration to use SSE transport:
+```json
+{
+   "mcpServers": {
+      "ticktick-remote": {
+         "url": "http://your-server:8080/sse"
+      }
+   }
+}
+```
+
+#### Other AI Providers
+
+Most MCP-compatible AI providers support SSE transport. Configure them with:
+- **URL**: `http://your-server:8080/sse`
+- **Transport**: SSE (Server-Sent Events)
+
+### Running Locally without Docker
+
+You can also run the server in remote mode locally:
+
+```bash
+# Run with SSE transport
+uv run -m ticktick_mcp.cli run --transport sse --host 0.0.0.0 --port 8080
+```
+
+The server will be available at `http://localhost:8080/sse`
+
+### Security Considerations
+
+⚠️ **Important**: When deploying to a remote server:
+
+1. **Use HTTPS**: Deploy behind a reverse proxy (nginx, Caddy) with SSL/TLS
+2. **Restrict Access**: Use firewall rules to limit who can access the server
+3. **Authentication**: Consider adding authentication middleware
+4. **Environment Variables**: Never commit `.env` files with credentials
+5. **Token Rotation**: Regularly refresh your TickTick access tokens
+
+Example nginx configuration with SSL:
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name mcp.yourdomain.com;
+    
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+    
+    location /sse {
+        proxy_pass http://localhost:8080/sse;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+}
+```
 
 ## Available MCP Tools
 
