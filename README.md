@@ -214,6 +214,18 @@ uv run -m ticktick_mcp.cli run --transport sse --host 0.0.0.0 --port 8080
 
 The server will be available at `http://localhost:8080/sse`
 
+### Testing the Server
+
+To verify the SSE server is working:
+
+```bash
+# Test connection to local server
+python test_sse_server.py
+
+# Test connection to remote server
+python test_sse_server.py --host your-server.com --port 8080
+```
+
 ### Security Considerations
 
 ⚠️ **Important**: When deploying to a remote server:
