@@ -4,6 +4,8 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for Ti
 
 **Now supports both local (stdio) and remote (SSE) deployment modes!** 🚀
 
+> 📖 **New to remote mode?** See [MIGRATION.md](MIGRATION.md) for a guide on the changes and deployment options.
+
 ## Features
 
 - 📋 View all your TickTick projects and tasks
