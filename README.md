@@ -2,6 +2,8 @@
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for TickTick that enables interacting with your TickTick task management system directly through Claude and other MCP clients.
 
+**Now supports both local (stdio) and remote (SSE) deployment modes!** 🚀
+
 ## Features
 
 - 📋 View all your TickTick projects and tasks
@@ -11,6 +13,8 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for Ti
 - 🗑️ Delete tasks and projects
 - 🔄 Full integration with TickTick's open API
 - 🔌 Seamless integration with Claude and other MCP clients
+- 🐳 **Docker support for remote deployment**
+- 🌐 **SSE transport for multi-client access**
 
 ## Prerequisites
 
@@ -18,6 +22,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for Ti
 - [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
 - TickTick account with API access
 - TickTick API credentials (Client ID, Client Secret, Access Token)
+- (Optional) Docker for remote deployment
 
 ## Installation
 
@@ -133,9 +138,11 @@ Once connected, you'll see the TickTick MCP server tools available in Claude, in
 
 ## Remote Server Deployment (Docker)
 
-For hosting the MCP server on a remote machine or Docker server accessible by multiple AI providers:
+For hosting the MCP server on a remote machine or Docker server accessible by multiple AI providers.
 
-### Docker Deployment
+> 📖 **For detailed deployment instructions**, including Kubernetes, cloud providers, and security best practices, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+### Quick Start with Docker
 
 1. **Authenticate with TickTick first** (on your local machine):
    ```bash
@@ -198,7 +205,10 @@ Most MCP-compatible AI providers support SSE transport. Configure them with:
 You can also run the server in remote mode locally:
 
 ```bash
-# Run with SSE transport
+# Quick start with provided script
+./start-remote.sh
+
+# Or manually with custom options
 uv run -m ticktick_mcp.cli run --transport sse --host 0.0.0.0 --port 8080
 ```
 
