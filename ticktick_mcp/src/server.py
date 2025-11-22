@@ -17,6 +17,22 @@ logger = logging.getLogger(__name__)
 # Create FastMCP server
 mcp = FastMCP("ticktick")
 
+# API Key configuration (comma-separated keys in env var MCP_SERVER_API_KEYS)
+API_KEYS = {k.strip() for k in os.getenv("MCP_SERVER_API_KEYS", "").split(",") if k.strip()}
+
+def _authorize(api_key: str) -> bool:
+    """Return True if api_key is valid or auth not configured."""
+    if not API_KEYS:  # auth disabled if no keys configured
+        return True
+    if not api_key:
+        return False
+    return api_key in API_KEYS
+
+def _auth_error() -> str:
+    if not API_KEYS:
+        return "Authorization not enforced (no API keys configured)."
+    return "Unauthorized: invalid or missing API key. Set MCP_SERVER_API_KEYS and provide api_key argument."
+
 # Create TickTick client
 ticktick = None
 
@@ -113,8 +129,10 @@ def format_project(project: Dict) -> str:
 # MCP Tools
 
 @mcp.tool()
-async def get_projects() -> str:
+async def get_projects(api_key: str = None) -> str:
     """Get all projects from TickTick."""
+    if not _authorize(api_key):
+        return _auth_error()
     if not ticktick:
         if not initialize_client():
             return "Failed to initialize TickTick client. Please check your API credentials."
@@ -137,7 +155,7 @@ async def get_projects() -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def get_project(project_id: str) -> str:
+async def get_project(project_id: str, api_key: str = None) -> str:
     """
     Get details about a specific project.
     
@@ -159,7 +177,7 @@ async def get_project(project_id: str) -> str:
         return f"Error retrieving project: {str(e)}"
 
 @mcp.tool()
-async def get_project_tasks(project_id: str) -> str:
+async def get_project_tasks(project_id: str, api_key: str = None) -> str:
     """
     Get all tasks in a specific project.
     
@@ -189,7 +207,7 @@ async def get_project_tasks(project_id: str) -> str:
         return f"Error retrieving project tasks: {str(e)}"
 
 @mcp.tool()
-async def get_task(project_id: str, task_id: str) -> str:
+async def get_task(project_id: str, task_id: str, api_key: str = None) -> str:
     """
     Get details about a specific task.
     
@@ -218,7 +236,8 @@ async def create_task(
     content: str = None, 
     start_date: str = None, 
     due_date: str = None, 
-    priority: int = 0
+    priority: int = 0,
+    api_key: str = None
 ) -> str:
     """
     Create a new task in TickTick.
@@ -274,7 +293,8 @@ async def update_task(
     content: str = None,
     start_date: str = None,
     due_date: str = None,
-    priority: int = None
+    priority: int = None,
+    api_key: str = None
 ) -> str:
     """
     Update an existing task in TickTick.
@@ -325,7 +345,7 @@ async def update_task(
         return f"Error updating task: {str(e)}"
 
 @mcp.tool()
-async def complete_task(project_id: str, task_id: str) -> str:
+async def complete_task(project_id: str, task_id: str, api_key: str = None) -> str:
     """
     Mark a task as complete.
     
@@ -348,7 +368,7 @@ async def complete_task(project_id: str, task_id: str) -> str:
         return f"Error completing task: {str(e)}"
 
 @mcp.tool()
-async def delete_task(project_id: str, task_id: str) -> str:
+async def delete_task(project_id: str, task_id: str, api_key: str = None) -> str:
     """
     Delete a task.
     
@@ -374,7 +394,8 @@ async def delete_task(project_id: str, task_id: str) -> str:
 async def create_project(
     name: str,
     color: str = "#F18181",
-    view_mode: str = "list"
+    view_mode: str = "list",
+    api_key: str = None
 ) -> str:
     """
     Create a new project in TickTick.
@@ -408,7 +429,7 @@ async def create_project(
         return f"Error creating project: {str(e)}"
 
 @mcp.tool()
-async def delete_project(project_id: str) -> str:
+async def delete_project(project_id: str, api_key: str = None) -> str:
     """
     Delete a project.
     
@@ -581,7 +602,7 @@ def _get_project_tasks_by_filter(projects: List[Dict], filter_func, filter_name:
 # New MCP Tools for Tasks
 
 @mcp.tool()
-async def get_all_tasks() -> str:
+async def get_all_tasks(api_key: str = None) -> str:
     """Get all tasks from TickTick. Ignores closed projects."""
     if not ticktick:
         if not initialize_client():
@@ -602,7 +623,7 @@ async def get_all_tasks() -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def get_tasks_by_priority(priority_id: int) -> str:
+async def get_tasks_by_priority(priority_id: int, api_key: str = None) -> str:
     """
     Get all tasks from TickTick by priority. Ignores closed projects.
 
@@ -632,7 +653,7 @@ async def get_tasks_by_priority(priority_id: int) -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def get_tasks_due_today() -> str:
+async def get_tasks_due_today(api_key: str = None) -> str:
     """Get all tasks from TickTick that are due today. Ignores closed projects."""
     if not ticktick:
         if not initialize_client():
@@ -653,7 +674,7 @@ async def get_tasks_due_today() -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def get_overdue_tasks() -> str:
+async def get_overdue_tasks(api_key: str = None) -> str:
     """Get all overdue tasks from TickTick. Ignores closed projects."""
     if not ticktick:
         if not initialize_client():
@@ -674,7 +695,7 @@ async def get_overdue_tasks() -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def get_tasks_due_tomorrow() -> str:
+async def get_tasks_due_tomorrow(api_key: str = None) -> str:
     """Get all tasks from TickTick that are due today. Ignores closed projects."""
     if not ticktick:
         if not initialize_client():
@@ -695,7 +716,7 @@ async def get_tasks_due_tomorrow() -> str:
         return f"Error retrieving projects: {str(e)}"
     
 @mcp.tool()
-async def get_tasks_due_in_days(days: int) -> str:
+async def get_tasks_due_in_days(days: int, api_key: str = None) -> str:
     """
     Get all tasks from TickTick that are due in exactly X days. Ignores closed projects.
     
@@ -725,7 +746,7 @@ async def get_tasks_due_in_days(days: int) -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def get_tasks_due_this_week() -> str:
+async def get_tasks_due_this_week(api_key: str = None) -> str:
     """Get all tasks from TickTick that are due within the next 7 days. Ignores closed projects."""
     if not ticktick:
         if not initialize_client():
@@ -756,7 +777,7 @@ async def get_tasks_due_this_week() -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def search_tasks(search_term: str) -> str:
+async def search_tasks(search_term: str, api_key: str = None) -> str:
     """
     Search for tasks in TickTick by title, content, or subtask titles. Ignores closed projects.
     
@@ -785,7 +806,7 @@ async def search_tasks(search_term: str) -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def batch_create_tasks(tasks: List[Dict[str, Any]]) -> str:
+async def batch_create_tasks(tasks: List[Dict[str, Any]], api_key: str = None) -> str:
     """
     Create multiple tasks in TickTick at once
     
@@ -886,7 +907,7 @@ async def batch_create_tasks(tasks: List[Dict[str, Any]]) -> str:
 # New MCP Tools for Getting things done framework (Priority / Due Dates)
 
 @mcp.tool()
-async def get_engaged_tasks() -> str:
+async def get_engaged_tasks(api_key: str = None) -> str:
     """
     Get all tasks from TickTick that are "Engaged".
     This includes tasks marked as high priority (5), due today or overdue.
@@ -913,7 +934,7 @@ async def get_engaged_tasks() -> str:
         return f"Error retrieving projects: {str(e)}"
 
 @mcp.tool()
-async def get_next_tasks() -> str:
+async def get_next_tasks(api_key: str = None) -> str:
     """
     Get all tasks from TickTick that are "Next".
     This includes tasks marked as medium priority (3) or due tomorrow.
@@ -944,7 +965,8 @@ async def create_subtask(
     parent_task_id: str,
     project_id: str,
     content: str = None,
-    priority: int = 0
+    priority: int = 0,
+    api_key: str = None
 ) -> str:
     """
     Create a subtask for a parent task within the same project.

@@ -4,18 +4,28 @@ services:
   ticktick-mcp:
     build: .
     container_name: ticktick-mcp-server
+    # Expose internal port for reverse proxy routing
     ports:
       - "8080:8080"
     environment:
-      # TickTick API credentials - set these in a .env file
+      # TickTick API credentials (supply via .env or external secret injection)
       - TICKTICK_CLIENT_ID=${TICKTICK_CLIENT_ID}
       - TICKTICK_CLIENT_SECRET=${TICKTICK_CLIENT_SECRET}
       - TICKTICK_ACCESS_TOKEN=${TICKTICK_ACCESS_TOKEN}
       - TICKTICK_REFRESH_TOKEN=${TICKTICK_REFRESH_TOKEN}
-      # Optional: Override TickTick API URLs (for Dida365)
+      # Optional overrides (Dida365, etc.)
       - TICKTICK_BASE_URL=${TICKTICK_BASE_URL:-https://api.ticktick.com/open/v1}
       - TICKTICK_AUTH_URL=${TICKTICK_AUTH_URL:-https://ticktick.com/oauth/authorize}
       - TICKTICK_TOKEN_URL=${TICKTICK_TOKEN_URL:-https://ticktick.com/oauth/token}
+      # API keys for MCP tool authorization (comma-separated). Prefer secrets.
+      - MCP_SERVER_API_KEYS=${MCP_SERVER_API_KEYS}
+      # Reverse proxy integration (nginx-proxy / jwilder / traefik style)
+      - VIRTUAL_HOST=ticktick.marcuslab.uk
+      - VIRTUAL_PORT=8080
+      - LETSENCRYPT_HOST=ticktick.marcuslab.uk
+      - LETSENCRYPT_EMAIL=marcus.williams13@gmail.com
+      # Optional logging level
+      - LOG_LEVEL=INFO
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')"]
@@ -23,6 +33,32 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
-    # Optional: mount .env file directly
+    # Use an env_file for local dev, override with secrets in prod
+    env_file:
+      - .env
+    # Uncomment to mount .env read-only instead of env_file
     # volumes:
     #   - ./.env:/app/.env:ro
+    networks:
+      - portpilot_default
+      - ticktick_internal
+    # Security options (non-root user can be set in Dockerfile build stage if desired)
+    # user: 1000:1000
+    # Read-only root FS except needed dirs (adjust if app writes elsewhere)
+    # read_only: true
+    # tmpfs:
+    #   - /tmp
+
+networks:
+  portpilot_default:
+    external: true
+  ticktick_internal:
+    driver: bridge
+
+# Optional secrets section (if upgrading to compose v3.9 with swarm or using bind mounts)
+# secrets:
+#   mcp_api_keys:
+#     file: ./secrets/mcp_api_keys
+
+# Example secrets file content (not committed):
+# echo "MCP_SERVER_API_KEYS=$(python - <<'PY'\nimport secrets;print(','.join(secrets.token_urlsafe(32) for _ in range(2)))\nPY)" > ./secrets/mcp_api_keys
