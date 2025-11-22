@@ -18,7 +18,7 @@ services:
       - TICKTICK_TOKEN_URL=${TICKTICK_TOKEN_URL:-https://ticktick.com/oauth/token}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/sse"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')"]
       interval: 30s
       timeout: 10s
       retries: 3

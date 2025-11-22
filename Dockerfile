@@ -28,8 +28,9 @@ RUN pip install --no-cache-dir -e .
 EXPOSE 8080
 
 # Health check endpoint (SSE server provides /sse endpoint)
+# Using Python since curl is not available in slim image
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/sse || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')" || exit 1
 
 # Run the server with SSE transport
 # Note: Users should mount their .env file or pass environment variables
