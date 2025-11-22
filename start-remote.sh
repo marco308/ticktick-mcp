@@ -12,19 +12,10 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}TickTick MCP Server - OAuth Gateway Mode${NC}"
 echo ""
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo -e "${RED}Error: .env file not found!${NC}"
-    echo "Please run authentication first:"
-    echo "  uv run -m ticktick_mcp.cli auth"
-    exit 1
-fi
-
-# Check if required environment variables are set
-source .env
+# Check if required environment variables are set (works with both .env file and docker env vars)
 if [ -z "$TICKTICK_ACCESS_TOKEN" ]; then
-    echo -e "${RED}Error: TICKTICK_ACCESS_TOKEN not found in .env file!${NC}"
-    echo "Please run authentication first:"
+    echo -e "${RED}Error: TICKTICK_ACCESS_TOKEN not set!${NC}"
+    echo "Please set TICKTICK_ACCESS_TOKEN environment variable or run authentication first:"
     echo "  uv run -m ticktick_mcp.cli auth"
     exit 1
 fi
@@ -32,7 +23,7 @@ fi
 # Check OAuth configuration
 if [ -z "$MCP_OAUTH_CLIENTS" ]; then
     echo -e "${RED}Error: MCP_OAUTH_CLIENTS not configured!${NC}"
-    echo "Please set MCP_OAUTH_CLIENTS in your .env file."
+    echo "Please set MCP_OAUTH_CLIENTS environment variable."
     echo "Example: MCP_OAUTH_CLIENTS=claude:your_secret_here"
     exit 1
 fi
@@ -58,16 +49,17 @@ echo ""
 
 # Start FastMCP server in background
 echo "Starting FastMCP SSE server on port $FASTMCP_PORT..."
-uv run -m ticktick_mcp.cli run --transport sse --host 127.0.0.1 --port "$FASTMCP_PORT" &
+# Use python directly in container (uv not installed in image)
+python -m ticktick_mcp.cli run --transport sse --host 127.0.0.1 --port "$FASTMCP_PORT" &
 FASTMCP_PID=$!
 
 # Give FastMCP a moment to start
 sleep 2
 
 # Start OAuth gateway in foreground
-echo "Starting OAuth gateway on port $GATEWAY_PORT..."
+echo "Starting OAuth Authorization Code gateway on port $GATEWAY_PORT..."
 export FASTMCP_SERVER_URL="http://127.0.0.1:$FASTMCP_PORT"
-exec python -m ticktick_mcp.gateway
+exec python -m ticktick_mcp.oauth_authorization_gateway
 
 # Cleanup function for graceful shutdown
 cleanup() {

@@ -169,11 +169,12 @@ async def token_endpoint(
     })
 
 
-@app.get("/sse")
+@app.api_route("/sse", methods=["GET", "POST"])
 async def sse_proxy(request: Request):
     """
     Proxy SSE endpoint with bearer token validation.
     Forwards authenticated requests to the FastMCP SSE server.
+    Supports both GET (SSE streaming) and POST (MCP messages).
     """
     # Verify bearer token
     authorization = request.headers.get("authorization")
@@ -189,6 +190,25 @@ async def sse_proxy(request: Request):
     # Forward to FastMCP SSE server
     async with httpx.AsyncClient() as client:
         try:
+            # Handle POST requests (MCP messages)
+            if request.method == "POST":
+                body = await request.body()
+                response = await client.post(
+                    f"{FASTMCP_SERVER_URL}/sse",
+                    content=body,
+                    headers={
+                        "Content-Type": request.headers.get("content-type", "application/json")
+                    },
+                    timeout=30.0
+                )
+                
+                return Response(
+                    content=response.content,
+                    status_code=response.status_code,
+                    headers=dict(response.headers)
+                )
+            
+            # Handle GET requests (SSE streaming)
             # Stream the SSE response
             async with client.stream(
                 "GET",
@@ -267,6 +287,24 @@ async def health_check():
         "gateway": "ticktick-mcp-oauth",
         "clients_configured": len(OAUTH_CLIENTS),
         "token_expiry_seconds": TOKEN_EXPIRY_SECONDS
+    }
+
+
+@app.get("/.well-known/mcp.json")
+async def mcp_metadata():
+    """MCP server metadata endpoint."""
+    return {
+        "name": "TickTick MCP Server",
+        "version": "1.0.0",
+        "authentication": {
+            "type": "oauth2-client-credentials",
+            "token_url": "/oauth/token"
+        },
+        "transport": "sse",
+        "endpoints": {
+            "sse": "/sse",
+            "messages": "/messages"
+        }
     }
 
 
